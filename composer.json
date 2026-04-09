@@ -1,0 +1,14 @@
+{
+    "name": "artemis/framework",
+    "description": "Simple PHP Backend Framework",
+    "type": "project",
+    "require": {
+        "php": ">=8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Artemis\\": "src/",
+            "App\\": "app/"
+        }
+    }
+}
