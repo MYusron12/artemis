@@ -3,7 +3,8 @@
 
 require __DIR__ . '/vendor/autoload.php';
 
-$command = $argv[1] ?? null;
+$command    = $argv[1] ?? null;
+$subcommand = $argv[2] ?? null;
 
 switch ($command) {
     case 'run':
@@ -13,7 +14,21 @@ switch ($command) {
         shell_exec("php -S $host:$port -t public/ public/index.php");
         break;
 
+    case 'migrate':
+        $files = glob(__DIR__ . '/database/migrations/*.php');
+        if (empty($files)) {
+            echo "Tidak ada migration.\n";
+            break;
+        }
+        foreach ($files as $file) {
+            require $file;
+            echo "Migrated: " . basename($file) . "\n";
+        }
+        break;
+
     default:
         echo "Perintah tidak ditemukan: $command\n";
-        echo "Gunakan: php artemis run\n";
+        echo "Gunakan:\n";
+        echo "  php artemis run\n";
+        echo "  php artemis migrate\n";
 }

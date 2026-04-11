@@ -3,6 +3,7 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use Artemis\Router;
+use Artemis\Database;
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
@@ -10,6 +11,9 @@ if ($uri === '/' || $uri === '') {
     readfile(__DIR__ . '/index.html');
     exit;
 }
+
+// Koneksi database
+Database::connect(__DIR__ . '/../database/artemis.db');
 
 $router = new Router();
 
