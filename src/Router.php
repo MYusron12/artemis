@@ -5,6 +5,7 @@ namespace Artemis;
 class Router
 {
     private array $routes = [];
+    private string $prefix = '';
 
     public function get(string $path, array $handler): void
     {
@@ -26,11 +27,21 @@ class Router
         $this->addRoute('DELETE', $path, $handler);
     }
 
+    public function group(string $prefix, callable $callback): void
+    {
+        $previousPrefix  = $this->prefix;
+        $this->prefix   .= $prefix;
+
+        $callback($this);
+
+        $this->prefix = $previousPrefix;
+    }
+
     private function addRoute(string $method, string $path, array $handler): void
     {
         $this->routes[] = [
             'method'  => $method,
-            'path'    => $path,
+            'path'    => $this->prefix . $path,
             'handler' => $handler,
         ];
     }
@@ -55,7 +66,6 @@ class Router
             }
         }
 
-        // Tidak ada route yang cocok
         http_response_code(404);
         header('Content-Type: application/json');
         echo json_encode([
@@ -66,12 +76,11 @@ class Router
 
     private function match(string $routePath, string $uri, array &$params): bool
     {
-        // Ubah {id} menjadi regex
         $pattern = preg_replace('/\{[^}]+\}/', '([^/]+)', $routePath);
         $pattern = '#^' . $pattern . '$#';
 
         if (preg_match($pattern, $uri, $matches)) {
-            array_shift($matches); // buang full match
+            array_shift($matches);
             $params = $matches;
             return true;
         }

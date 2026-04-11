@@ -4,14 +4,13 @@
 require __DIR__ . '/vendor/autoload.php';
 
 $command = $argv[1] ?? null;
-$subcommand = $argv[2] ?? null;
 
 switch ($command) {
     case 'run':
         $host = 'localhost';
         $port = '8300';
         echo "Artemis berjalan di http://$host:$port\n";
-        shell_exec("php -S $host:$port -t public/");
+        shell_exec("php -S $host:$port -t public/ public/index.php");
         break;
 
     default:

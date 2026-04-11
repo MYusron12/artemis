@@ -27,7 +27,7 @@ Artemis is built with one goal: **simplicity**. No magic, no bloat — just the 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/username/artemis.git
+git clone https://github.com/MYusron12/artemis.git
 cd artemis
 ```
 
@@ -43,7 +43,7 @@ composer install
 php artemis run
 ```
 
-Open your browser at `http://localhost:8100`
+Open your browser at `http://localhost:8300`
 
 ---
 
@@ -60,6 +60,7 @@ artemis/
 │
 ├── app/                   # Your application code
 │   └── Controllers/
+│       └── UserController.php
 │
 ├── database/
 │   └── migrations/
@@ -68,7 +69,8 @@ artemis/
 │   └── api.php
 │
 ├── public/
-│   └── index.php          # Entry point
+│   ├── index.php          # Entry point
+│   └── index.html         # Landing page
 │
 ├── artemis                # CLI tool
 └── composer.json
@@ -78,14 +80,25 @@ artemis/
 
 ## Routing
 
-Define your routes in `routes/api.php`:
+Define your routes in `routes/api.php`. Artemis supports route grouping for versioned APIs:
 
 ```php
-$router->get('/users', [UserController::class, 'index']);
-$router->post('/users', [UserController::class, 'store']);
-$router->get('/users/{id}', [UserController::class, 'show']);
-$router->put('/users/{id}', [UserController::class, 'update']);
-$router->delete('/users/{id}', [UserController::class, 'destroy']);
+<?php
+
+use App\Controllers\UserController;
+
+$router->group('/openapi/v1.0', function($router) {
+    $router->get('/users', [UserController::class, 'index']);
+    $router->post('/users', [UserController::class, 'store']);
+    $router->get('/users/{id}', [UserController::class, 'show']);
+    $router->put('/users/{id}', [UserController::class, 'update']);
+    $router->delete('/users/{id}', [UserController::class, 'destroy']);
+});
+
+// Adding a new version is easy
+$router->group('/openapi/v2.0', function($router) {
+    $router->get('/users', [UserController::class, 'index']);
+});
 ```
 
 With middleware:
@@ -109,17 +122,42 @@ use Artemis\Response;
 
 class UserController
 {
-    public function index(Request $request): Response
+    public function index(): void
     {
-        $users = []; // fetch from database
-        return Response::success($users);
+        Response::success([
+            ['id' => 1, 'name' => 'Budi'],
+            ['id' => 2, 'name' => 'Ani'],
+        ]);
     }
 
-    public function store(Request $request): Response
+    public function show(string $id): void
     {
-        $name = $request->input('name');
-        // save to database
-        return Response::success(null, 'Created', 201);
+        Response::success(['id' => $id, 'name' => 'Budi']);
+    }
+
+    public function store(): void
+    {
+        $request = new Request();
+        $name    = $request->input('name');
+
+        if (!$name) {
+            Response::error('Invalid Mandatory Field name', 400, '502');
+        }
+
+        Response::success(['id' => 3, 'name' => $name], 'Successful', 201);
+    }
+
+    public function update(string $id): void
+    {
+        $request = new Request();
+        $name    = $request->input('name');
+
+        Response::success(['id' => $id, 'name' => $name]);
+    }
+
+    public function destroy(string $id): void
+    {
+        Response::success(null, 'Deleted');
     }
 }
 ```
@@ -139,11 +177,139 @@ All responses follow a consistent JSON structure:
 }
 ```
 
+**Created:**
+```json
+{
+  "responseCode": "201M500",
+  "responseMessage": "Successful",
+  "data": {}
+}
+```
+
 **Error:**
 ```json
 {
   "responseCode": "400M502",
-  "responseMessage": "Invalid Mandatory Field"
+  "responseMessage": "Invalid Mandatory Field name"
+}
+```
+
+**Not Found:**
+```json
+{
+  "responseCode": "404M503",
+  "responseMessage": "Route Not Found"
+}
+```
+
+---
+
+## API Collection
+
+Base URL: `http://localhost:8300`
+
+### GET /openapi/v1.0/users
+
+Retrieve all users.
+
+```
+GET http://localhost:8300/openapi/v1.0/users
+```
+
+Response:
+```json
+{
+  "responseCode": "200M500",
+  "responseMessage": "Successful",
+  "data": [
+    { "id": 1, "name": "Budi" },
+    { "id": 2, "name": "Ani" }
+  ]
+}
+```
+
+---
+
+### POST /openapi/v1.0/users
+
+Create a new user.
+
+```
+POST http://localhost:8300/openapi/v1.0/users
+Content-Type: application/json
+
+{
+  "name": "Citra"
+}
+```
+
+Response:
+```json
+{
+  "responseCode": "201M500",
+  "responseMessage": "Successful",
+  "data": { "id": 3, "name": "Citra" }
+}
+```
+
+---
+
+### GET /openapi/v1.0/users/{id}
+
+Retrieve a user by ID.
+
+```
+GET http://localhost:8300/openapi/v1.0/users/1
+```
+
+Response:
+```json
+{
+  "responseCode": "200M500",
+  "responseMessage": "Successful",
+  "data": { "id": "1", "name": "Budi" }
+}
+```
+
+---
+
+### PUT /openapi/v1.0/users/{id}
+
+Update a user by ID.
+
+```
+PUT http://localhost:8300/openapi/v1.0/users/1
+Content-Type: application/json
+
+{
+  "name": "Doni"
+}
+```
+
+Response:
+```json
+{
+  "responseCode": "200M500",
+  "responseMessage": "Successful",
+  "data": { "id": "1", "name": "Doni" }
+}
+```
+
+---
+
+### DELETE /openapi/v1.0/users/{id}
+
+Delete a user by ID.
+
+```
+DELETE http://localhost:8300/openapi/v1.0/users/1
+```
+
+Response:
+```json
+{
+  "responseCode": "200M500",
+  "responseMessage": "Deleted"
 }
 ```
 
@@ -154,10 +320,10 @@ All responses follow a consistent JSON structure:
 Artemis comes with a built-in CLI tool:
 
 ```bash
-php artemis run                          # Start development server
+php artemis run                             # Start development server at localhost:8300
 php artemis make:controller UserController  # Generate a controller
-php artemis migrate                      # Run database migrations
-php artemis migrate:rollback             # Rollback last migration
+php artemis migrate                         # Run database migrations
+php artemis migrate:rollback                # Rollback last migration
 ```
 
 ---
@@ -165,8 +331,8 @@ php artemis migrate:rollback             # Rollback last migration
 ## Roadmap
 
 - [x] CLI Tool
-- [ ] Router
-- [ ] Request & Response
+- [x] Router (with group/versioning support)
+- [x] Request & Response
 - [ ] Middleware
 - [ ] Database / Query Builder
 - [ ] Validation
