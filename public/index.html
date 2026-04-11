@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Artemis — Simple PHP Backend Framework</title>
+    <meta name="description" content="A small, simple, and readable PHP backend framework. No magic, no bloat." />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --purple-50: #EEEDFE;
+            --purple-400: #7F77DD;
+            --purple-600: #534AB7;
+            --purple-800: #3C3489;
+            --teal-400: #1D9E75;
+            --text-primary: #111;
+            --text-secondary: #555;
+            --text-muted: #888;
+            --bg: #ffffff;
+            --bg-secondary: #f9f9f8;
+            --border: rgba(0, 0, 0, 0.08);
+            --border-hover: rgba(0, 0, 0, 0.15);
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-mono: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text-primary: #f0f0f0;
+                --text-secondary: #aaa;
+                --text-muted: #666;
+                --bg: #111;
+                --bg-secondary: #1a1a1a;
+                --border: rgba(255, 255, 255, 0.08);
+                --border-hover: rgba(255, 255, 255, 0.15);
+                --purple-50: #1e1a3a;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            border-bottom: 0.5px solid var(--border);
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 10;
+        }
+
+        .nav-logo {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-logo .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--purple-600);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .hero {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 5rem 2rem 4rem;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 99px;
+            background: var(--purple-50);
+            color: var(--purple-800);
+            border: 0.5px solid rgba(83, 74, 183, 0.2);
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(36px, 6vw, 56px);
+            font-weight: 500;
+            line-height: 1.1;
+            letter-spacing: -1.5px;
+            margin-bottom: 1.25rem;
+        }
+
+        .hero h1 span {
+            color: var(--purple-600);
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 420px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.65;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            padding: 10px 24px;
+            border-radius: var(--radius-md);
+            background: var(--purple-600);
+            color: #fff;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            background: var(--purple-800);
+        }
+
+        .btn-secondary {
+            padding: 10px 24px;
+            border-radius: var(--radius-md);
+            background: transparent;
+            color: var(--text-primary);
+            border: 0.5px solid var(--border-hover);
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+        }
+
+        hr {
+            border: none;
+            border-top: 0.5px solid var(--border);
+        }
+
+        section {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .section-label {
+            font-size: 12px;
+            color: var(--purple-600);
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.5px;
+        }
+
+        .section-sub {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 2.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            transition: border-color 0.15s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .feature-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-md);
+            background: var(--purple-50);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .feature-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .feature-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .feature-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .code-wrap {
+            background: var(--bg-secondary);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-top: 2rem;
+            overflow-x: auto;
+        }
+
+        .code-wrap pre {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: var(--text-primary);
+            line-height: 1.75;
+            white-space: pre;
+        }
+
+        .kw {
+            color: var(--purple-600);
+        }
+
+        .str {
+            color: var(--teal-400);
+        }
+
+        .cm {
+            color: var(--text-muted);
+        }
+
+        .fn {
+            color: #D85A30;
+        }
+
+        .collection {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 2rem;
+        }
+
+        .endpoint {
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+
+        .endpoint-header:hover {
+            background: var(--bg);
+        }
+
+        .method {
+            font-size: 11px;
+            font-weight: 500;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            min-width: 52px;
+            text-align: center;
+        }
+
+        .method.get {
+            background: #E1F5EE;
+            color: #0F6E56;
+        }
+
+        .method.post {
+            background: #E6F1FB;
+            color: #185FA5;
+        }
+
+        .method.put {
+            background: #FAEEDA;
+            color: #854F0B;
+        }
+
+        .method.delete {
+            background: #FCEBEB;
+            color: #A32D2D;
+        }
+
+        .endpoint-path {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .endpoint-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .chevron {
+            margin-left: auto;
+            font-size: 12px;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+
+        .chevron.open {
+            transform: rotate(180deg);
+        }
+
+        .endpoint-body {
+            display: none;
+            border-top: 0.5px solid var(--border);
+        }
+
+        .endpoint-body.open {
+            display: block;
+        }
+
+        .endpoint-cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+        }
+
+        .endpoint-col {
+            padding: 1rem 1.25rem;
+        }
+
+        .endpoint-col:first-child {
+            border-right: 0.5px solid var(--border);
+        }
+
+        .col-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.75rem;
+        }
+
+        .endpoint-col pre {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-primary);
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        .req-note {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .roadmap {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 2rem;
+        }
+
+        .roadmap-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: 0.5px solid var(--border);
+            background: var(--bg);
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .roadmap-item.done {
+            opacity: 0.55;
+        }
+
+        .rdot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .rdot.done {
+            background: var(--teal-400);
+        }
+
+        .rdot.todo {
+            background: #888;
+        }
+
+        footer {
+            border-top: 0.5px solid var(--border);
+            padding: 2rem;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        footer a {
+            color: var(--purple-600);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .footer-link:hover {
+            color: var(--purple-600);
+        }
+
+        .footer-link svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .endpoint-cols {
+                grid-template-columns: 1fr;
+            }
+
+            .endpoint-col:first-child {
+                border-right: none;
+                border-bottom: 0.5px solid var(--border);
+            }
+
+            .nav-links {
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <a href="#" class="nav-logo"><span class="dot"></span>Artemis</a>
+        <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#quickstart">Quick start</a></li>
+            <li><a href="#collection">API</a></li>
+            <li><a href="#roadmap">Roadmap</a></li>
+            <li><a href="https://github.com/MYusron12/artemis" target="_blank">GitHub</a></li>
+        </ul>
+    </nav>
+
+    <div class="hero">
+        <div class="badge">PHP Backend Framework</div>
+        <h1>Build backends<br>with <span>Artemis</span></h1>
+        <p>A small, simple, and readable PHP framework. No magic, no bloat — just the tools you need.</p>
+        <div class="btn-group">
+            <a href="https://github.com/MYusron12/artemis" class="btn-primary" target="_blank">View on GitHub</a>
+            <a href="#quickstart" class="btn-secondary">Quick start</a>
+        </div>
+    </div>
+
+    <hr>
+
+    <section id="features">
+        <div class="section-label">Core features</div>
+        <div class="section-title">Everything you need, nothing you don't</div>
+        <div class="section-sub">Artemis ships only the essentials — small enough to understand fully, powerful enough
+            for real projects.</div>
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></div>
+                <div class="feature-title">Router</div>
+                <div class="feature-desc">Clean URL routing with dynamic parameters, HTTP methods, and version grouping.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M3 9h18M9 21V9" />
+                    </svg></div>
+                <div class="feature-title">Request & Response</div>
+                <div class="feature-desc">Simple wrappers for reading input and sending consistent JSON responses.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 8v4l3 3" />
+                    </svg></div>
+                <div class="feature-title">Middleware</div>
+                <div class="feature-desc">Run logic before or after your controllers — auth, logging, and more.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2">
+                        <ellipse cx="12" cy="5" rx="9" ry="3" />
+                        <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+                        <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
+                    </svg></div>
+                <div class="feature-title">Database</div>
+                <div class="feature-desc">Lightweight query builder — no complex ORM required.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2">
+                        <polyline points="4 17 10 11 4 5" />
+                        <line x1="12" y1="19" x2="20" y2="19" />
+                    </svg></div>
+                <div class="feature-title">CLI Tool</div>
+                <div class="feature-desc">Run your server, generate files, and migrate with simple commands.</div>
+            </div>
+        </div>
+    </section>
+
+    <hr>
+
+    <section id="quickstart">
+        <div class="section-label">Quick start</div>
+        <div class="section-title">Up and running in seconds</div>
+        <div class="section-sub">Clone, install, and start building your API right away.</div>
+        <div class="code-wrap">
+            <pre><span class="cm"># Clone & install</span>
+git clone https://github.com/MYusron12/artemis.git
+composer install
+
+<span class="cm"># Start the server</span>
+php artemis run
+<span class="cm"># Running at http://localhost:8300</span>
+
+<span class="cm"># Define your routes in routes/api.php</span>
+<span class="kw">$router</span>-><span class="fn">group</span>(<span class="str">'/openapi/v1.0'</span>, <span class="kw">function</span>(<span class="kw">$router</span>) {
+    <span class="kw">$router</span>-><span class="fn">get</span>(<span class="str">'/users'</span>, [UserController::<span class="kw">class</span>, <span class="str">'index'</span>]);
+    <span class="kw">$router</span>-><span class="fn">post</span>(<span class="str">'/users'</span>, [UserController::<span class="kw">class</span>, <span class="str">'store'</span>]);
+    <span class="kw">$router</span>-><span class="fn">get</span>(<span class="str">'/users/{id}'</span>, [UserController::<span class="kw">class</span>, <span class="str">'show'</span>]);
+    <span class="kw">$router</span>-><span class="fn">put</span>(<span class="str">'/users/{id}'</span>, [UserController::<span class="kw">class</span>, <span class="str">'update'</span>]);
+    <span class="kw">$router</span>-><span class="fn">delete</span>(<span class="str">'/users/{id}'</span>, [UserController::<span class="kw">class</span>, <span class="str">'destroy'</span>]);
+});</pre>
+        </div>
+    </section>
+
+    <hr>
+
+    <section id="collection">
+        <div class="section-label">API Collection</div>
+        <div class="section-title">Available endpoints</div>
+        <div class="section-sub">Base URL: <code
+                style="font-family: var(--font-mono); font-size: 13px; color: var(--purple-600);">http://localhost:8300</code>
+            — click an endpoint to expand.</div>
+
+        <div class="collection">
+
+            <div class="endpoint">
+                <div class="endpoint-header" onclick="toggle(this)">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/openapi/v1.0/users</span>
+                    <span class="endpoint-desc">Retrieve all users</span>
+                    <span class="chevron">▼</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-cols">
+                        <div class="endpoint-col">
+                            <div class="col-label">Request</div>
+                            <p class="req-note">No body required.</p>
+                            <pre>GET /openapi/v1.0/users
+Content-Type: application/json</pre>
+                        </div>
+                        <div class="endpoint-col">
+                            <div class="col-label">Response 200</div>
+                            <pre>{
+  "responseCode": "200M500",
+  "responseMessage": "Successful",
+  "data": [
+    {
+      "id": 1,
+      "name": "Budi",
+      "email": "budi@mail.com",
+      "created_at": "2026-04-11 10:00:00"
+    }
+  ]
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header" onclick="toggle(this)">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/openapi/v1.0/users</span>
+                    <span class="endpoint-desc">Create a new user</span>
+                    <span class="chevron">▼</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-cols">
+                        <div class="endpoint-col">
+                            <div class="col-label">Request</div>
+                            <pre>POST /openapi/v1.0/users
+Content-Type: application/json
+
+{
+  "name": "Citra",
+  "email": "citra@mail.com"
+}</pre>
+                        </div>
+                        <div class="endpoint-col">
+                            <div class="col-label">Response 201</div>
+                            <pre>{
+  "responseCode": "201M500",
+  "responseMessage": "Successful",
+  "data": {
+    "id": 1,
+    "name": "Citra",
+    "email": "citra@mail.com",
+    "created_at": "2026-04-11 10:00:00"
+  }
+}</pre>
+                            <div class="col-label" style="margin-top: 1rem;">Response 400</div>
+                            <pre>{
+  "responseCode": "400M502",
+  "responseMessage": "Invalid Mandatory Field name"
+}</pre>
+                            <div class="col-label" style="margin-top: 1rem;">Response 409</div>
+                            <pre>{
+  "responseCode": "409M509",
+  "responseMessage": "Data already exists"
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header" onclick="toggle(this)">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/openapi/v1.0/users/{id}</span>
+                    <span class="endpoint-desc">Retrieve a user by ID</span>
+                    <span class="chevron">▼</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-cols">
+                        <div class="endpoint-col">
+                            <div class="col-label">Request</div>
+                            <pre>GET /openapi/v1.0/users/1
+Content-Type: application/json</pre>
+                        </div>
+                        <div class="endpoint-col">
+                            <div class="col-label">Response 200</div>
+                            <pre>{
+  "responseCode": "200M500",
+  "responseMessage": "Successful",
+  "data": {
+    "id": 1,
+    "name": "Citra",
+    "email": "citra@mail.com",
+    "created_at": "2026-04-11 10:00:00"
+  }
+}</pre>
+                            <div class="col-label" style="margin-top: 1rem;">Response 404</div>
+                            <pre>{
+  "responseCode": "404M503",
+  "responseMessage": "User Not Found"
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header" onclick="toggle(this)">
+                    <span class="method put">PUT</span>
+                    <span class="endpoint-path">/openapi/v1.0/users/{id}</span>
+                    <span class="endpoint-desc">Update a user by ID</span>
+                    <span class="chevron">▼</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-cols">
+                        <div class="endpoint-col">
+                            <div class="col-label">Request</div>
+                            <pre>PUT /openapi/v1.0/users/1
+Content-Type: application/json
+
+{
+  "name": "Doni",
+  "email": "doni@mail.com"
+}</pre>
+                        </div>
+                        <div class="endpoint-col">
+                            <div class="col-label">Response 200</div>
+                            <pre>{
+  "responseCode": "200M500",
+  "responseMessage": "Successful",
+  "data": {
+    "id": 1,
+    "name": "Doni",
+    "email": "doni@mail.com",
+    "created_at": "2026-04-11 10:00:00"
+  }
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header" onclick="toggle(this)">
+                    <span class="method delete">DELETE</span>
+                    <span class="endpoint-path">/openapi/v1.0/users/{id}</span>
+                    <span class="endpoint-desc">Delete a user by ID</span>
+                    <span class="chevron">▼</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="endpoint-cols">
+                        <div class="endpoint-col">
+                            <div class="col-label">Request</div>
+                            <pre>DELETE /openapi/v1.0/users/1
+Content-Type: application/json</pre>
+                        </div>
+                        <div class="endpoint-col">
+                            <div class="col-label">Response 200</div>
+                            <pre>{
+  "responseCode": "200M500",
+  "responseMessage": "Deleted"
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <hr>
+
+    <section id="roadmap">
+        <div class="section-label">Roadmap</div>
+        <div class="section-title">What's coming</div>
+        <div class="section-sub">Artemis is actively being built. Here's what's done and what's next.</div>
+        <div class="roadmap">
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>CLI Tool
+            </div>
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>Router (with group/versioning support)
+            </div>
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>Request & Response
+            </div>
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>Middleware
+            </div>
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>Database / Query Builder (SQLite)
+            </div>
+            <div class="roadmap-item">
+                <div class="rdot todo"></div>Validation
+            </div>
+            <div class="roadmap-item">
+                <div class="rdot todo"></div>Error Handler
+            </div>
+            <div class="roadmap-item">
+                <div class="rdot todo"></div>make:controller & make:migration
+            </div>
+            <div class="roadmap-item">
+                <div class="rdot todo"></div>SNAP BI Support
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-links">
+            <a href="https://github.com/MYusron12/artemis" target="_blank" class="footer-link">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+                </svg>
+                GitHub
+            </a>
+            <a href="https://www.instagram.com/m_yussron/?hl=en" target="_blank" class="footer-link">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+                </svg>
+                @m_yussron
+            </a>
+            <a href="https://trakteer.id/muhammad_yusron17" target="_blank" class="footer-link">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+                Trakteer
+            </a>
+        </div>
+        <div>Artemis &mdash; Built with PHP &amp; simplicity in mind &nbsp;&middot;&nbsp; <a
+                href="https://github.com/MYusron12/artemis" target="_blank">GitHub</a></div>
+    </footer>
+
+    <script>
+        function toggle(header) {
+            const body = header.nextElementSibling;
+            const chevron = header.querySelector('.chevron');
+            const isOpen = body.classList.contains('open');
+            document.querySelectorAll('.endpoint-body.open').forEach(el => el.classList.remove('open'));
+            document.querySelectorAll('.chevron.open').forEach(el => el.classList.remove('open'));
+            if (!isOpen) {
+                body.classList.add('open');
+                chevron.classList.add('open');
+            }
+        }
+    </script>
+
+</body>
+
+</html>
