@@ -58,6 +58,43 @@
             line-height: 1.6;
         }
 
+        /* Creator bar */
+        .creator-bar {
+            background: var(--purple-50);
+            border-bottom: 0.5px solid rgba(83, 74, 183, 0.15);
+            padding: 8px 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .creator-label {
+            font-size: 12px;
+            color: var(--purple-800);
+            font-weight: 500;
+        }
+
+        .creator-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--purple-600);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .creator-link:hover {
+            text-decoration: underline;
+        }
+
+        .creator-link svg {
+            width: 14px;
+            height: 14px;
+        }
+
         nav {
             display: flex;
             align-items: center;
@@ -217,7 +254,7 @@
 
         .features {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 16px;
             margin-top: 2.5rem;
         }
@@ -296,6 +333,7 @@
             color: #D85A30;
         }
 
+        /* Collection */
         .collection {
             display: flex;
             flex-direction: column;
@@ -303,10 +341,25 @@
             margin-top: 2rem;
         }
 
+        .collection-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .collection-group-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+
         .endpoint {
             border: 0.5px solid var(--border);
             border-radius: var(--radius-lg);
             overflow: hidden;
+            margin-bottom: 8px;
         }
 
         .endpoint-header {
@@ -371,6 +424,7 @@
             font-size: 12px;
             color: var(--text-muted);
             transition: transform 0.2s;
+            flex-shrink: 0;
         }
 
         .chevron.open {
@@ -386,18 +440,32 @@
             display: block;
         }
 
-        .endpoint-cols {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0;
+        .endpoint-tabs {
+            display: flex;
+            border-bottom: 0.5px solid var(--border);
         }
 
-        .endpoint-col {
+        .endpoint-tab {
+            font-size: 12px;
+            padding: 8px 16px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -0.5px;
+        }
+
+        .endpoint-tab.active {
+            color: var(--purple-600);
+            border-bottom-color: var(--purple-600);
+        }
+
+        .endpoint-tab-content {
+            display: none;
             padding: 1rem 1.25rem;
         }
 
-        .endpoint-col:first-child {
-            border-right: 0.5px solid var(--border);
+        .endpoint-tab-content.active {
+            display: block;
         }
 
         .col-label {
@@ -407,20 +475,47 @@
             text-transform: uppercase;
             letter-spacing: 0.06em;
             margin-bottom: 0.75rem;
+            margin-top: 1rem;
         }
 
-        .endpoint-col pre {
+        .col-label:first-child {
+            margin-top: 0;
+        }
+
+        .endpoint-tab-content pre {
             font-family: var(--font-mono);
             font-size: 12px;
             color: var(--text-primary);
             line-height: 1.7;
             white-space: pre-wrap;
+            background: var(--bg-secondary);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            position: relative;
         }
 
-        .req-note {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: var(--purple-50);
+            color: var(--purple-600);
+            border: 0.5px solid rgba(83, 74, 183, 0.2);
+            cursor: pointer;
+            font-family: var(--font-sans);
+        }
+
+        .copy-btn:hover {
+            background: var(--purple-600);
+            color: #fff;
+        }
+
+        .pre-wrap {
+            position: relative;
         }
 
         .roadmap {
@@ -506,16 +601,11 @@
         }
 
         @media (max-width: 600px) {
-            .endpoint-cols {
-                grid-template-columns: 1fr;
-            }
-
-            .endpoint-col:first-child {
-                border-right: none;
-                border-bottom: 0.5px solid var(--border);
-            }
-
             .nav-links {
+                gap: 12px;
+            }
+
+            .creator-bar {
                 gap: 12px;
             }
         }
@@ -523,6 +613,25 @@
 </head>
 
 <body>
+
+    <!-- Creator Bar -->
+    <div class="creator-bar">
+        <span class="creator-label">Created by Muhammad Yusron</span>
+        <a href="https://www.instagram.com/m_yussron/?hl=en" target="_blank" class="creator-link">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+            </svg>
+            @m_yussron
+        </a>
+        <a href="https://trakteer.id/muhammad_yusron17" target="_blank" class="creator-link">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            </svg>
+            Support di Trakteer
+        </a>
+    </div>
 
     <nav>
         <a href="#" class="nav-logo"><span class="dot"></span>Artemis</a>
@@ -584,7 +693,27 @@
                         <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3" />
                     </svg></div>
                 <div class="feature-title">Database</div>
-                <div class="feature-desc">Lightweight query builder — no complex ORM required.</div>
+                <div class="feature-desc">Lightweight query builder with SQLite and MySQL support.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2">
+                        <path d="M9 12l2 2 4-4" />
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                    </svg></div>
+                <div class="feature-title">Validation</div>
+                <div class="feature-desc">Simple input validation with built-in rules — required, email, min, max,
+                    numeric.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg></div>
+                <div class="feature-title">Logging</div>
+                <div class="feature-desc">Daily log files stored in storage/logs — requests, errors, and custom
+                    messages.</div>
             </div>
             <div class="feature-card">
                 <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2">
@@ -592,7 +721,15 @@
                         <line x1="12" y1="19" x2="20" y2="19" />
                     </svg></div>
                 <div class="feature-title">CLI Tool</div>
-                <div class="feature-desc">Run your server, generate files, and migrate with simple commands.</div>
+                <div class="feature-desc">Run server, migrate, test, and generate files with simple commands.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <path d="M8 21h8M12 17v4" />
+                    </svg></div>
+                <div class="feature-title">SNAP BI</div>
+                <div class="feature-desc">Built-in SNAP BI support — Signature, Access Token B2B, and more.</div>
             </div>
         </div>
     </section>
@@ -607,6 +744,12 @@
             <pre><span class="cm"># Clone & install</span>
 git clone https://github.com/MYusron12/artemis.git
 composer install
+
+<span class="cm"># Setup environment</span>
+cp .env.example .env
+
+<span class="cm"># Run migrations</span>
+php artemis migrate
 
 <span class="cm"># Start the server</span>
 php artemis run
@@ -630,187 +773,242 @@ php artemis run
         <div class="section-title">Available endpoints</div>
         <div class="section-sub">Base URL: <code
                 style="font-family: var(--font-mono); font-size: 13px; color: var(--purple-600);">http://localhost:8300</code>
-            — click an endpoint to expand.</div>
+            — click to expand, copy curl to use directly.</div>
 
         <div class="collection">
 
-            <div class="endpoint">
-                <div class="endpoint-header" onclick="toggle(this)">
-                    <span class="method get">GET</span>
-                    <span class="endpoint-path">/openapi/v1.0/users</span>
-                    <span class="endpoint-desc">Retrieve all users</span>
-                    <span class="chevron">▼</span>
-                </div>
-                <div class="endpoint-body">
-                    <div class="endpoint-cols">
-                        <div class="endpoint-col">
-                            <div class="col-label">Request</div>
-                            <p class="req-note">No body required.</p>
-                            <pre>GET /openapi/v1.0/users
-Content-Type: application/json</pre>
+            <!-- Users -->
+            <div class="collection-group">
+                <div class="collection-group-label">Users</div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header" onclick="toggle(this)">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/openapi/v1.0/users</span>
+                        <span class="endpoint-desc">Retrieve all users</span>
+                        <span class="chevron">▼</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <div class="endpoint-tabs">
+                            <div class="endpoint-tab active" onclick="switchTab(this, 'curl')">cURL</div>
+                            <div class="endpoint-tab" onclick="switchTab(this, 'response')">Response</div>
                         </div>
-                        <div class="endpoint-col">
+                        <div class="endpoint-tab-content active" data-tab="curl">
+                            <div class="pre-wrap">
+                                <pre>curl -X GET http://localhost:8300/openapi/v1.0/users \
+  -H "Content-Type: application/json"</pre>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </div>
+                        <div class="endpoint-tab-content" data-tab="response">
                             <div class="col-label">Response 200</div>
                             <pre>{
   "responseCode": "200M500",
   "responseMessage": "Successful",
   "data": [
-    {
-      "id": 1,
-      "name": "Budi",
-      "email": "budi@mail.com",
-      "created_at": "2026-04-11 10:00:00"
-    }
+    { "id": 1, "name": "Budi", "email": "budi@mail.com", "created_at": "2026-04-12 10:00:00" }
   ]
 }</pre>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="endpoint">
-                <div class="endpoint-header" onclick="toggle(this)">
-                    <span class="method post">POST</span>
-                    <span class="endpoint-path">/openapi/v1.0/users</span>
-                    <span class="endpoint-desc">Create a new user</span>
-                    <span class="chevron">▼</span>
-                </div>
-                <div class="endpoint-body">
-                    <div class="endpoint-cols">
-                        <div class="endpoint-col">
-                            <div class="col-label">Request</div>
-                            <pre>POST /openapi/v1.0/users
-Content-Type: application/json
-
-{
-  "name": "Citra",
-  "email": "citra@mail.com"
-}</pre>
+                <div class="endpoint">
+                    <div class="endpoint-header" onclick="toggle(this)">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/openapi/v1.0/users</span>
+                        <span class="endpoint-desc">Create a new user</span>
+                        <span class="chevron">▼</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <div class="endpoint-tabs">
+                            <div class="endpoint-tab active" onclick="switchTab(this, 'curl')">cURL</div>
+                            <div class="endpoint-tab" onclick="switchTab(this, 'response')">Response</div>
                         </div>
-                        <div class="endpoint-col">
+                        <div class="endpoint-tab-content active" data-tab="curl">
+                            <div class="pre-wrap">
+                                <pre>curl -X POST http://localhost:8300/openapi/v1.0/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Citra", "email": "citra@mail.com"}'</pre>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </div>
+                        <div class="endpoint-tab-content" data-tab="response">
                             <div class="col-label">Response 201</div>
                             <pre>{
   "responseCode": "201M500",
   "responseMessage": "Successful",
-  "data": {
-    "id": 1,
-    "name": "Citra",
-    "email": "citra@mail.com",
-    "created_at": "2026-04-11 10:00:00"
-  }
+  "data": { "id": 1, "name": "Citra", "email": "citra@mail.com", "created_at": "2026-04-12 10:00:00" }
 }</pre>
-                            <div class="col-label" style="margin-top: 1rem;">Response 400</div>
-                            <pre>{
-  "responseCode": "400M502",
-  "responseMessage": "Invalid Mandatory Field name"
-}</pre>
-                            <div class="col-label" style="margin-top: 1rem;">Response 409</div>
-                            <pre>{
-  "responseCode": "409M509",
-  "responseMessage": "Data already exists"
-}</pre>
+                            <div class="col-label">Response 400</div>
+                            <pre>{ "responseCode": "400M502", "responseMessage": "Invalid Mandatory Field name" }</pre>
+                            <div class="col-label">Response 409</div>
+                            <pre>{ "responseCode": "409M509", "responseMessage": "Data already exists" }</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header" onclick="toggle(this)">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/openapi/v1.0/users/{id}</span>
+                        <span class="endpoint-desc">Retrieve a user by ID</span>
+                        <span class="chevron">▼</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <div class="endpoint-tabs">
+                            <div class="endpoint-tab active" onclick="switchTab(this, 'curl')">cURL</div>
+                            <div class="endpoint-tab" onclick="switchTab(this, 'response')">Response</div>
+                        </div>
+                        <div class="endpoint-tab-content active" data-tab="curl">
+                            <div class="pre-wrap">
+                                <pre>curl -X GET http://localhost:8300/openapi/v1.0/users/1 \
+  -H "Content-Type: application/json"</pre>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </div>
+                        <div class="endpoint-tab-content" data-tab="response">
+                            <div class="col-label">Response 200</div>
+                            <pre>{ "responseCode": "200M500", "responseMessage": "Successful", "data": { "id": 1, "name": "Citra", "email": "citra@mail.com" } }</pre>
+                            <div class="col-label">Response 404</div>
+                            <pre>{ "responseCode": "404M503", "responseMessage": "User Not Found" }</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header" onclick="toggle(this)">
+                        <span class="method put">PUT</span>
+                        <span class="endpoint-path">/openapi/v1.0/users/{id}</span>
+                        <span class="endpoint-desc">Update a user by ID</span>
+                        <span class="chevron">▼</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <div class="endpoint-tabs">
+                            <div class="endpoint-tab active" onclick="switchTab(this, 'curl')">cURL</div>
+                            <div class="endpoint-tab" onclick="switchTab(this, 'response')">Response</div>
+                        </div>
+                        <div class="endpoint-tab-content active" data-tab="curl">
+                            <div class="pre-wrap">
+                                <pre>curl -X PUT http://localhost:8300/openapi/v1.0/users/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Doni", "email": "doni@mail.com"}'</pre>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </div>
+                        <div class="endpoint-tab-content" data-tab="response">
+                            <div class="col-label">Response 200</div>
+                            <pre>{ "responseCode": "200M500", "responseMessage": "Successful", "data": { "id": 1, "name": "Doni", "email": "doni@mail.com" } }</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header" onclick="toggle(this)">
+                        <span class="method delete">DELETE</span>
+                        <span class="endpoint-path">/openapi/v1.0/users/{id}</span>
+                        <span class="endpoint-desc">Delete a user by ID</span>
+                        <span class="chevron">▼</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <div class="endpoint-tabs">
+                            <div class="endpoint-tab active" onclick="switchTab(this, 'curl')">cURL</div>
+                            <div class="endpoint-tab" onclick="switchTab(this, 'response')">Response</div>
+                        </div>
+                        <div class="endpoint-tab-content active" data-tab="curl">
+                            <div class="pre-wrap">
+                                <pre>curl -X DELETE http://localhost:8300/openapi/v1.0/users/1 \
+  -H "Content-Type: application/json"</pre>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </div>
+                        <div class="endpoint-tab-content" data-tab="response">
+                            <div class="col-label">Response 200</div>
+                            <pre>{ "responseCode": "200M500", "responseMessage": "Deleted" }</pre>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="endpoint">
-                <div class="endpoint-header" onclick="toggle(this)">
-                    <span class="method get">GET</span>
-                    <span class="endpoint-path">/openapi/v1.0/users/{id}</span>
-                    <span class="endpoint-desc">Retrieve a user by ID</span>
-                    <span class="chevron">▼</span>
-                </div>
-                <div class="endpoint-body">
-                    <div class="endpoint-cols">
-                        <div class="endpoint-col">
-                            <div class="col-label">Request</div>
-                            <pre>GET /openapi/v1.0/users/1
-Content-Type: application/json</pre>
+            <!-- SNAP BI -->
+            <div class="collection-group">
+                <div class="collection-group-label">SNAP BI</div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header" onclick="toggle(this)">
+                        <span class="method get">GET</span>
+                        <span class="endpoint-path">/snap/v1.0/get-token</span>
+                        <span class="endpoint-desc">Generate signature for testing</span>
+                        <span class="chevron">▼</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <div class="endpoint-tabs">
+                            <div class="endpoint-tab active" onclick="switchTab(this, 'curl')">cURL</div>
+                            <div class="endpoint-tab" onclick="switchTab(this, 'response')">Response</div>
                         </div>
-                        <div class="endpoint-col">
+                        <div class="endpoint-tab-content active" data-tab="curl">
+                            <div class="pre-wrap">
+                                <pre>curl -X GET http://localhost:8300/snap/v1.0/get-token \
+  -H "Content-Type: application/json"</pre>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </div>
+                        <div class="endpoint-tab-content" data-tab="response">
                             <div class="col-label">Response 200</div>
                             <pre>{
   "responseCode": "200M500",
   "responseMessage": "Successful",
   "data": {
-    "id": 1,
-    "name": "Citra",
-    "email": "citra@mail.com",
-    "created_at": "2026-04-11 10:00:00"
+    "clientId": "artemis-dummy-client-001",
+    "timestamp": "2026-04-12T07:53:29+07:00",
+    "signature": "abc123..."
   }
-}</pre>
-                            <div class="col-label" style="margin-top: 1rem;">Response 404</div>
-                            <pre>{
-  "responseCode": "404M503",
-  "responseMessage": "User Not Found"
 }</pre>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="endpoint">
-                <div class="endpoint-header" onclick="toggle(this)">
-                    <span class="method put">PUT</span>
-                    <span class="endpoint-path">/openapi/v1.0/users/{id}</span>
-                    <span class="endpoint-desc">Update a user by ID</span>
-                    <span class="chevron">▼</span>
-                </div>
-                <div class="endpoint-body">
-                    <div class="endpoint-cols">
-                        <div class="endpoint-col">
-                            <div class="col-label">Request</div>
-                            <pre>PUT /openapi/v1.0/users/1
-Content-Type: application/json
-
-{
-  "name": "Doni",
-  "email": "doni@mail.com"
-}</pre>
+                <div class="endpoint">
+                    <div class="endpoint-header" onclick="toggle(this)">
+                        <span class="method post">POST</span>
+                        <span class="endpoint-path">/snap/v1.0/access-token/b2b</span>
+                        <span class="endpoint-desc">Request Access Token B2B</span>
+                        <span class="chevron">▼</span>
+                    </div>
+                    <div class="endpoint-body">
+                        <div class="endpoint-tabs">
+                            <div class="endpoint-tab active" onclick="switchTab(this, 'curl')">cURL</div>
+                            <div class="endpoint-tab" onclick="switchTab(this, 'response')">Response</div>
                         </div>
-                        <div class="endpoint-col">
+                        <div class="endpoint-tab-content active" data-tab="curl">
+                            <div class="pre-wrap">
+                                <pre>curl -X POST http://localhost:8300/snap/v1.0/access-token/b2b \
+  -H "Content-Type: application/json" \
+  -H "X-CLIENT-KEY: artemis-dummy-client-001" \
+  -H "X-TIMESTAMP: 2026-04-12T07:53:29+07:00" \
+  -H "X-SIGNATURE: {signature-from-get-token}" \
+  -d '{"grantType": "client_credentials"}'</pre>
+                                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </div>
+                        <div class="endpoint-tab-content" data-tab="response">
                             <div class="col-label">Response 200</div>
                             <pre>{
   "responseCode": "200M500",
   "responseMessage": "Successful",
   "data": {
-    "id": 1,
-    "name": "Doni",
-    "email": "doni@mail.com",
-    "created_at": "2026-04-11 10:00:00"
+    "accessToken": "eyJ...",
+    "tokenType": "BearerToken",
+    "expiresIn": 900
   }
 }</pre>
+                            <div class="col-label">Response 401</div>
+                            <pre>{ "responseCode": "401M401", "responseMessage": "Unauthorized. Invalid Signature" }</pre>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="endpoint">
-                <div class="endpoint-header" onclick="toggle(this)">
-                    <span class="method delete">DELETE</span>
-                    <span class="endpoint-path">/openapi/v1.0/users/{id}</span>
-                    <span class="endpoint-desc">Delete a user by ID</span>
-                    <span class="chevron">▼</span>
-                </div>
-                <div class="endpoint-body">
-                    <div class="endpoint-cols">
-                        <div class="endpoint-col">
-                            <div class="col-label">Request</div>
-                            <pre>DELETE /openapi/v1.0/users/1
-Content-Type: application/json</pre>
-                        </div>
-                        <div class="endpoint-col">
-                            <div class="col-label">Response 200</div>
-                            <pre>{
-  "responseCode": "200M500",
-  "responseMessage": "Deleted"
-}</pre>
-                        </div>
-                    </div>
-                </div>
             </div>
-
         </div>
     </section>
 
@@ -834,19 +1032,28 @@ Content-Type: application/json</pre>
                 <div class="rdot done"></div>Middleware
             </div>
             <div class="roadmap-item done">
-                <div class="rdot done"></div>Database / Query Builder (SQLite)
+                <div class="rdot done"></div>Database / Query Builder (SQLite & MySQL)
             </div>
-            <div class="roadmap-item">
-                <div class="rdot todo"></div>Validation
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>Validation
             </div>
-            <div class="roadmap-item">
-                <div class="rdot todo"></div>Error Handler
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>Error Handler
             </div>
-            <div class="roadmap-item">
-                <div class="rdot todo"></div>make:controller & make:migration
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>Environment (.env)
             </div>
-            <div class="roadmap-item">
-                <div class="rdot todo"></div>SNAP BI Support
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>Logging
+            </div>
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>Unit Testing
+            </div>
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>make:controller & make:migration
+            </div>
+            <div class="roadmap-item done">
+                <div class="rdot done"></div>SNAP BI Support
             </div>
         </div>
     </section>
@@ -890,6 +1097,23 @@ Content-Type: application/json</pre>
                 body.classList.add('open');
                 chevron.classList.add('open');
             }
+        }
+
+        function switchTab(tab, name) {
+            const body = tab.closest('.endpoint-body');
+            body.querySelectorAll('.endpoint-tab').forEach(t => t.classList.remove('active'));
+            body.querySelectorAll('.endpoint-tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            body.querySelector(`.endpoint-tab-content[data-tab="${name}"]`).classList.add('active');
+        }
+
+        function copyCode(btn) {
+            const pre = btn.previousElementSibling || btn.parentElement.querySelector('pre');
+            const text = pre.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy', 2000);
+            });
         }
     </script>
 
