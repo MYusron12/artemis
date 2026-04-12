@@ -3,8 +3,8 @@
 
 require __DIR__ . '/vendor/autoload.php';
 
-$command    = $argv[1] ?? null;
-$subcommand = $argv[2] ?? null;
+$command = $argv[1] ?? null;
+$arg     = $argv[2] ?? null;
 
 switch ($command) {
     case 'run':
@@ -26,9 +26,136 @@ switch ($command) {
         }
         break;
 
+    case 'make:controller':
+        if (!$arg) {
+            echo "Nama controller diperlukan.\n";
+            echo "Gunakan: php artemis make:controller NamaController\n";
+            break;
+        }
+        makeController($arg);
+        break;
+
+    case 'make:migration':
+        if (!$arg) {
+            echo "Nama migration diperlukan.\n";
+            echo "Gunakan: php artemis make:migration create_nama_table\n";
+            break;
+        }
+        makeMigration($arg);
+        break;
+
+    case 'test':
+        echo "Menjalankan tests...\n";
+        passthru('vendor\bin\phpunit');
+        break;
+
     default:
-        echo "Perintah tidak ditemukan: $command\n";
-        echo "Gunakan:\n";
-        echo "  php artemis run\n";
-        echo "  php artemis migrate\n";
+        echo "Artemis CLI\n\n";
+        echo "Perintah tersedia:\n";
+        echo "  php artemis run                              Start development server\n";
+        echo "  php artemis migrate                          Run database migrations\n";
+        echo "  php artemis make:controller NamaController   Generate a controller\n";
+        echo "  php artemis make:migration create_nama_table Generate a migration\n";
+}
+
+function makeController(string $name): void
+{
+    $dir  = __DIR__ . '/app/Controllers';
+    $file = "$dir/{$name}.php";
+
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+
+    if (file_exists($file)) {
+        echo "Controller $name sudah ada.\n";
+        return;
+    }
+
+    $template = <<<PHP
+<?php
+
+namespace App\Controllers;
+
+use Artemis\Request;
+use Artemis\Response;
+use Artemis\Database;
+use Artemis\Validator;
+
+class {$name}
+{
+    public function index(): void
+    {
+        Response::success([]);
+    }
+
+    public function show(string \$id): void
+    {
+        Response::success(['id' => \$id]);
+    }
+
+    public function store(): void
+    {
+        \$request   = new Request();
+        \$validator = Validator::make(\$request->body(), [
+            // 'field' => 'required',
+        ]);
+
+        if (\$validator->fails()) {
+            Response::error(\$validator->firstError(), 400, '502');
+        }
+
+        Response::success(null, 'Successful', 201);
+    }
+
+    public function update(string \$id): void
+    {
+        \$request = new Request();
+        Response::success(['id' => \$id]);
+    }
+
+    public function destroy(string \$id): void
+    {
+        Response::success(null, 'Deleted');
+    }
+}
+PHP;
+
+    file_put_contents($file, $template);
+    echo "Controller berhasil dibuat: app/Controllers/{$name}.php\n";
+}
+
+function makeMigration(string $name): void
+{
+    $dir  = __DIR__ . '/database/migrations';
+    $timestamp = date('Y_m_d_His');
+    $file = "$dir/{$timestamp}_{$name}.php";
+
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+
+    $tableName = str_replace(['create_', '_table'], '', $name);
+
+    $template = <<<PHP
+<?php
+
+use Artemis\Database;
+
+Database::connect(__DIR__ . '/../../database/artemis.db');
+
+\$pdo = Artemis\Database::getConnection();
+
+\$pdo->exec("
+    CREATE TABLE IF NOT EXISTS {$tableName} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+");
+
+echo "Migration: {$tableName} table created.\\n";
+PHP;
+
+    file_put_contents($file, $template);
+    echo "Migration berhasil dibuat: database/migrations/{$timestamp}_{$name}.php\n";
 }

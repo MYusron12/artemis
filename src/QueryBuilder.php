@@ -58,9 +58,9 @@ class QueryBuilder
             return $stmt->execute(array_values($data));
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
-                Response::error('Data already exists', 409, '509');
+                throw new \RuntimeException('Data already exists', 409);
             }
-            Response::error('Database error', 500, '500');
+            throw new \RuntimeException('Database error', 500);
         }
     }
 

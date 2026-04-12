@@ -37,7 +37,19 @@ cd artemis
 composer install
 ```
 
-### 3. Run the server
+### 3. Setup environment
+
+```bash
+cp .env.example .env
+```
+
+### 4. Run migrations
+
+```bash
+php artemis migrate
+```
+
+### 5. Run the server
 
 ```bash
 php artemis run
@@ -57,7 +69,11 @@ artemis/
 │   ├── Response.php
 │   ├── Middleware.php
 │   ├── Database.php
-│   └── QueryBuilder.php
+│   ├── QueryBuilder.php
+│   ├── Validator.php
+│   ├── ErrorHandler.php
+│   ├── Env.php
+│   └── Log.php
 │
 ├── app/                   # Your application code
 │   ├── Controllers/
@@ -73,12 +89,48 @@ artemis/
 ├── routes/
 │   └── api.php
 │
+├── storage/
+│   └── logs/              # Daily log files
+│
+├── tests/
+│   ├── Unit/
+│   │   ├── ValidatorTest.php
+│   │   ├── RouterTest.php
+│   │   ├── RequestTest.php
+│   │   └── ResponseTest.php
+│   └── Feature/
+│       └── UserTest.php
+│
 ├── public/
 │   ├── index.php          # Entry point
 │   └── index.html         # Landing page
 │
 ├── artemis                # CLI tool
-└── composer.json
+├── phpunit.xml
+├── composer.json
+└── .env
+```
+
+---
+
+## Environment
+
+Create a `.env` file in the root directory:
+
+```env
+APP_ENV=development
+
+# SQLite (default)
+DB_DRIVER=sqlite
+DB_PATH=database/artemis.db
+
+# MySQL
+# DB_DRIVER=mysql
+# DB_HOST=localhost
+# DB_PORT=3306
+# DB_NAME=artemis
+# DB_USER=root
+# DB_PASS=
 ```
 
 ---
@@ -128,6 +180,8 @@ namespace App\Controllers;
 use Artemis\Request;
 use Artemis\Response;
 use Artemis\Database;
+use Artemis\Validator;
+use Artemis\Log;
 
 class UserController
 {
@@ -150,36 +204,50 @@ class UserController
 
     public function store(): void
     {
-        $request = new Request();
-        $name    = $request->input('name');
-        $email   = $request->input('email');
-
-        if (!$name) {
-            Response::error('Invalid Mandatory Field name', 400, '502');
-        }
-
-        if (!$email) {
-            Response::error('Invalid Mandatory Field email', 400, '502');
-        }
-
-        Database::table('users')->insert([
-            'name'  => $name,
-            'email' => $email,
+        $request   = new Request();
+        $validator = Validator::make($request->body(), [
+            'name'  => 'required|min:3|max:100',
+            'email' => 'required|email',
         ]);
 
-        $user = Database::table('users')->where('email', $email)->first();
+        if ($validator->fails()) {
+            Response::error($validator->firstError(), 400, '502');
+        }
+
+        try {
+            Database::table('users')->insert([
+                'name'  => $request->input('name'),
+                'email' => $request->input('email'),
+            ]);
+        } catch (\RuntimeException $e) {
+            if ($e->getCode() === 409) {
+                Response::error('Data already exists', 409, '509');
+            }
+            Response::error('Database error', 500, '500');
+        }
+
+        $user = Database::table('users')->where('email', $request->input('email'))->first();
+
+        Log::info('User created: ' . $request->input('email'));
+
         Response::success($user, 'Successful', 201);
     }
 
     public function update(string $id): void
     {
-        $request = new Request();
-        $name    = $request->input('name');
-        $email   = $request->input('email');
+        $request   = new Request();
+        $validator = Validator::make($request->body(), [
+            'name'  => 'required|min:3|max:100',
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            Response::error($validator->firstError(), 400, '502');
+        }
 
         Database::table('users')->where('id', $id)->update([
-            'name'  => $name,
-            'email' => $email,
+            'name'  => $request->input('name'),
+            'email' => $request->input('email'),
         ]);
 
         $user = Database::table('users')->where('id', $id)->first();
@@ -226,35 +294,38 @@ class AuthMiddleware implements Middleware
 
 ---
 
+## Validation
+
+```php
+$validator = Validator::make($request->body(), [
+    'name'  => 'required|min:3|max:100',
+    'email' => 'required|email',
+    'age'   => 'required|numeric',
+]);
+
+if ($validator->fails()) {
+    Response::error($validator->firstError(), 400, '502');
+}
+```
+
+Available rules:
+
+| Rule | Description |
+|---|---|
+| `required` | Field must not be empty |
+| `min:N` | Minimum N characters |
+| `max:N` | Maximum N characters |
+| `email` | Must be a valid email format |
+| `numeric` | Must be a number |
+
+---
+
 ## Database
 
-Artemis uses SQLite by default. Run migrations with:
+Artemis uses SQLite by default, with MySQL support via `.env`. Run migrations with:
 
 ```bash
 php artemis migrate
-```
-
-Create a migration in `database/migrations/`:
-
-```php
-<?php
-
-use Artemis\Database;
-
-Database::connect(__DIR__ . '/../../database/artemis.db');
-
-$pdo = Artemis\Database::getConnection();
-
-$pdo->exec("
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-");
-
-echo "Migration: users table created.\n";
 ```
 
 Query Builder usage:
@@ -274,6 +345,31 @@ Database::table('users')->where('id', 1)->update(['name' => 'Ani']);
 
 // Delete
 Database::table('users')->where('id', 1)->delete();
+```
+
+---
+
+## Logging
+
+Logs are stored in `storage/logs/` as daily files (e.g. `2026-04-11.log`).
+
+```php
+use Artemis\Log;
+
+Log::info('User created: budi@mail.com');
+Log::warning('Failed login attempt');
+Log::error('Something went wrong');
+```
+
+All incoming requests are logged automatically.
+
+Example log output:
+
+```
+[2026-04-11 10:00:00] REQUEST: GET /openapi/v1.0/users from ::1
+[2026-04-11 10:00:01] REQUEST: POST /openapi/v1.0/users from ::1
+[2026-04-11 10:00:01] INFO: User created: citra@mail.com
+[2026-04-11 10:00:05] ERROR: UNIQUE constraint failed: users.email
 ```
 
 ---
@@ -332,6 +428,14 @@ All responses follow a consistent JSON structure:
 }
 ```
 
+**Server Error:**
+```json
+{
+  "responseCode": "500M500",
+  "responseMessage": "Internal Server Error"
+}
+```
+
 ---
 
 ## API Collection
@@ -355,8 +459,6 @@ Response:
 }
 ```
 
----
-
 ### POST /openapi/v1.0/users
 
 ```
@@ -369,33 +471,11 @@ Content-Type: application/json
 }
 ```
 
-Response:
-```json
-{
-  "responseCode": "201M500",
-  "responseMessage": "Successful",
-  "data": { "id": 1, "name": "Citra", "email": "citra@mail.com", "created_at": "2026-04-11 10:00:00" }
-}
-```
-
----
-
 ### GET /openapi/v1.0/users/{id}
 
 ```
 GET http://localhost:8300/openapi/v1.0/users/1
 ```
-
-Response:
-```json
-{
-  "responseCode": "200M500",
-  "responseMessage": "Successful",
-  "data": { "id": 1, "name": "Citra", "email": "citra@mail.com", "created_at": "2026-04-11 10:00:00" }
-}
-```
-
----
 
 ### PUT /openapi/v1.0/users/{id}
 
@@ -409,42 +489,49 @@ Content-Type: application/json
 }
 ```
 
-Response:
-```json
-{
-  "responseCode": "200M500",
-  "responseMessage": "Successful",
-  "data": { "id": 1, "name": "Doni", "email": "doni@mail.com", "created_at": "2026-04-11 10:00:00" }
-}
-```
-
----
-
 ### DELETE /openapi/v1.0/users/{id}
 
 ```
 DELETE http://localhost:8300/openapi/v1.0/users/1
 ```
 
-Response:
-```json
-{
-  "responseCode": "200M500",
-  "responseMessage": "Deleted"
-}
+---
+
+## Testing
+
+Artemis uses PHPUnit for testing.
+
+```bash
+# Run all tests
+php artemis test
+
+# Or directly
+vendor/bin/phpunit
+```
+
+Test structure:
+
+```
+tests/
+├── Unit/          # Test individual components
+│   ├── ValidatorTest.php
+│   ├── RouterTest.php
+│   ├── RequestTest.php
+│   └── ResponseTest.php
+└── Feature/       # Test complete features with database
+    └── UserTest.php
 ```
 
 ---
 
 ## CLI Tool
 
-Artemis comes with a built-in CLI tool:
-
 ```bash
 php artemis run                             # Start development server at localhost:8300
 php artemis migrate                         # Run database migrations
-php artemis make:controller UserController  # Generate a controller (coming soon)
-php artemis make:migration create_users     # Generate a migration (coming soon)
+php artemis test                            # Run unit tests
+php artemis make:controller UserController  # Generate a controller
+php artemis make:migration create_users     # Generate a migration
 ```
 
 ---
@@ -455,10 +542,13 @@ php artemis make:migration create_users     # Generate a migration (coming soon)
 - [x] Router (with group/versioning support)
 - [x] Request & Response
 - [x] Middleware
-- [x] Database / Query Builder (SQLite)
-- [ ] Validation
-- [ ] Error Handler
-- [ ] make:controller & make:migration
+- [x] Database / Query Builder (SQLite & MySQL)
+- [x] Validation
+- [x] Error Handler
+- [x] Environment (.env)
+- [x] Logging
+- [x] Unit Testing
+- [x] make:controller & make:migration
 - [ ] SNAP BI Support
 
 ---

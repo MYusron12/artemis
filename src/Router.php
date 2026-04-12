@@ -129,4 +129,9 @@ class Router
 
         return false;
     }
+
+    public function getRoutes(): array
+    {
+        return $this->routes;
+    }
 }

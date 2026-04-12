@@ -5,6 +5,7 @@ namespace App\Controllers;
 use Artemis\Request;
 use Artemis\Response;
 use Artemis\Database;
+use Artemis\Validator;
 
 class UserController
 {
@@ -27,25 +28,30 @@ class UserController
 
     public function store(): void
     {
-        $request = new Request();
-        $name    = $request->input('name');
-        $email   = $request->input('email');
-
-        if (!$name) {
-            Response::error('Invalid Mandatory Field name', 400, '502');
-        }
-
-        if (!$email) {
-            Response::error('Invalid Mandatory Field email', 400, '502');
-        }
-
-        Database::table('users')->insert([
-            'name'  => $name,
-            'email' => $email,
+        $request   = new Request();
+        $validator = Validator::make($request->body(), [
+            'name'  => 'required|min:3|max:100',
+            'email' => 'required|email',
         ]);
 
+        if ($validator->fails()) {
+            Response::error($validator->firstError(), 400, '502');
+        }
+
+        try {
+            Database::table('users')->insert([
+                'name'  => $request->input('name'),
+                'email' => $request->input('email'),
+            ]);
+        } catch (\RuntimeException $e) {
+            if ($e->getCode() === 409) {
+                Response::error('Data already exists', 409, '509');
+            }
+            Response::error('Database error', 500, '500');
+        }
+
         $user = Database::table('users')
-            ->where('email', $email)
+            ->where('email', $request->input('email'))
             ->first();
 
         Response::success($user, 'Successful', 201);
@@ -53,13 +59,19 @@ class UserController
 
     public function update(string $id): void
     {
-        $request = new Request();
-        $name    = $request->input('name');
-        $email   = $request->input('email');
+        $request   = new Request();
+        $validator = Validator::make($request->body(), [
+            'name'  => 'required|min:3|max:100',
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            Response::error($validator->firstError(), 400, '502');
+        }
 
         Database::table('users')->where('id', $id)->update([
-            'name'  => $name,
-            'email' => $email,
+            'name'  => $request->input('name'),
+            'email' => $request->input('email'),
         ]);
 
         $user = Database::table('users')->where('id', $id)->first();
