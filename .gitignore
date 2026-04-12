@@ -1,0 +1,4 @@
+vendor/
+database/artemis.db
+.env
+storage/logs/
