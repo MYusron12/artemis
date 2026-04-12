@@ -10,10 +10,22 @@ class Env
             return;
         }
 
-        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $content = file_get_contents($path);
+        $lines   = explode("\n", $content);
+        $i       = 0;
 
-        foreach ($lines as $line) {
-            if (str_starts_with(trim($line), '#')) {
+        while ($i < count($lines)) {
+            $line = trim($lines[$i]);
+
+            // Skip komentar dan baris kosong
+            if (empty($line) || str_starts_with($line, '#')) {
+                $i++;
+                continue;
+            }
+
+            // Cek ada = tidak
+            if (!str_contains($line, '=')) {
+                $i++;
                 continue;
             }
 
@@ -21,8 +33,29 @@ class Env
             $key   = trim($key);
             $value = trim($value);
 
+            // Cek apakah value multiline (diawali tanda kutip)
+            if (str_starts_with($value, '"') && !str_ends_with($value, '"')) {
+                $value = ltrim($value, '"');
+                $i++;
+
+                while ($i < count($lines)) {
+                    $nextLine = $lines[$i];
+
+                    if (str_ends_with(trim($nextLine), '"')) {
+                        $value .= "\n" . rtrim(trim($nextLine), '"');
+                        break;
+                    }
+
+                    $value .= "\n" . $nextLine;
+                    $i++;
+                }
+            } else {
+                $value = trim($value, '"');
+            }
+
             $_ENV[$key]  = $value;
             putenv("$key=$value");
+            $i++;
         }
     }
 

@@ -2,6 +2,16 @@
 
 > A simple, lightweight PHP backend framework.
 
+<p>
+  <a href="https://www.instagram.com/m_yussron/?hl=en" target="_blank">
+    <img src="https://img.shields.io/badge/Instagram-@m__yussron-E4405F?style=flat&logo=instagram&logoColor=white" />
+  </a>
+  &nbsp;
+  <a href="https://trakteer.id/muhammad_yusron17" target="_blank">
+    <img src="https://img.shields.io/badge/Trakteer-Support-red?style=flat&logo=ko-fi&logoColor=white" />
+  </a>
+</p>
+
 ---
 
 ## Philosophy
@@ -73,11 +83,17 @@ artemis/
 │   ├── Validator.php
 │   ├── ErrorHandler.php
 │   ├── Env.php
-│   └── Log.php
+│   ├── Log.php
+│   └── Snap/
+│       ├── Signature.php
+│       ├── AccessToken.php
+│       ├── SnapMiddleware.php
+│       └── SnapHelper.php
 │
 ├── app/                   # Your application code
 │   ├── Controllers/
-│   │   └── UserController.php
+│   │   ├── UserController.php
+│   │   └── SnapController.php
 │   └── Middlewares/
 │       └── AuthMiddleware.php
 │
@@ -131,6 +147,17 @@ DB_PATH=database/artemis.db
 # DB_NAME=artemis
 # DB_USER=root
 # DB_PASS=
+
+# SNAP BI
+SNAP_CLIENT_ID=your-client-id
+SNAP_CLIENT_SECRET=your-client-secret
+SNAP_BASE_URL=https://api.bank.co.id
+SNAP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----"
+SNAP_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----
+...
+-----END PUBLIC KEY-----"
 ```
 
 ---
@@ -266,8 +293,6 @@ class UserController
 
 ## Middleware
 
-Create a middleware in `app/Middlewares/`:
-
 ```php
 <?php
 
@@ -322,7 +347,7 @@ Available rules:
 
 ## Database
 
-Artemis uses SQLite by default, with MySQL support via `.env`. Run migrations with:
+Artemis supports SQLite and MySQL via `.env`. Run migrations with:
 
 ```bash
 php artemis migrate
@@ -331,19 +356,10 @@ php artemis migrate
 Query Builder usage:
 
 ```php
-// Get all
 Database::table('users')->get();
-
-// Get one
 Database::table('users')->where('id', 1)->first();
-
-// Insert
 Database::table('users')->insert(['name' => 'Budi', 'email' => 'budi@mail.com']);
-
-// Update
 Database::table('users')->where('id', 1)->update(['name' => 'Ani']);
-
-// Delete
 Database::table('users')->where('id', 1)->delete();
 ```
 
@@ -351,7 +367,7 @@ Database::table('users')->where('id', 1)->delete();
 
 ## Logging
 
-Logs are stored in `storage/logs/` as daily files (e.g. `2026-04-11.log`).
+Logs are stored in `storage/logs/` as daily files.
 
 ```php
 use Artemis\Log;
@@ -363,78 +379,67 @@ Log::error('Something went wrong');
 
 All incoming requests are logged automatically.
 
-Example log output:
+---
 
+## SNAP BI
+
+Artemis has built-in SNAP BI support for Access Token B2B.
+
+### Generate signature & request access token
+
+```php
+use Artemis\Snap\Signature;
+use Artemis\Snap\SnapHelper;
+
+$timestamp  = SnapHelper::timestamp();
+$clientId   = Env::get('SNAP_CLIENT_ID');
+$privateKey = Env::get('SNAP_PRIVATE_KEY');
+
+$signature = Signature::generateAsymmetric($clientId, $timestamp, $privateKey);
 ```
-[2026-04-11 10:00:00] REQUEST: GET /openapi/v1.0/users from ::1
-[2026-04-11 10:00:01] REQUEST: POST /openapi/v1.0/users from ::1
-[2026-04-11 10:00:01] INFO: User created: citra@mail.com
-[2026-04-11 10:00:05] ERROR: UNIQUE constraint failed: users.email
+
+### Routes
+
+```php
+use App\Controllers\SnapController;
+use Artemis\Snap\SnapMiddleware;
+
+// Issue access token
+$router->post('/snap/v1.0/access-token/b2b', [SnapController::class, 'issueAccessToken']);
+
+// Protected endpoint
+$router->group('/snap/v1.0', function($router) {
+    $router->get('/dummy', [SnapController::class, 'dummy']);
+}, [SnapMiddleware::class]);
+```
+
+### Access Token Response
+
+```json
+{
+  "responseCode": "200M500",
+  "responseMessage": "Successful",
+  "data": {
+    "accessToken": "eyJ...",
+    "tokenType": "BearerToken",
+    "expiresIn": 900
+  }
+}
 ```
 
 ---
 
 ## Response Format
 
-All responses follow a consistent JSON structure:
-
-**Success:**
-```json
-{
-  "responseCode": "200M500",
-  "responseMessage": "Successful",
-  "data": []
-}
-```
-
-**Created:**
-```json
-{
-  "responseCode": "201M500",
-  "responseMessage": "Successful",
-  "data": {}
-}
-```
-
-**Error:**
-```json
-{
-  "responseCode": "400M502",
-  "responseMessage": "Invalid Mandatory Field name"
-}
-```
-
-**Unauthorized:**
-```json
-{
-  "responseCode": "401M401",
-  "responseMessage": "Unauthorized"
-}
-```
-
-**Not Found:**
-```json
-{
-  "responseCode": "404M503",
-  "responseMessage": "Route Not Found"
-}
-```
-
-**Duplicate:**
-```json
-{
-  "responseCode": "409M509",
-  "responseMessage": "Data already exists"
-}
-```
-
-**Server Error:**
-```json
-{
-  "responseCode": "500M500",
-  "responseMessage": "Internal Server Error"
-}
-```
+| HTTP | Code | Message |
+|---|---|---|
+| 200 | 200M500 | Successful |
+| 201 | 201M500 | Successful |
+| 400 | 400M502 | Invalid Mandatory Field |
+| 401 | 401M401 | Unauthorized |
+| 404 | 404M503 | Route Not Found |
+| 409 | 409M509 | Data already exists |
+| 500 | 500M500 | Internal Server Error |
 
 ---
 
@@ -443,83 +448,51 @@ All responses follow a consistent JSON structure:
 Base URL: `http://localhost:8300`
 
 ### GET /openapi/v1.0/users
-
 ```
 GET http://localhost:8300/openapi/v1.0/users
 ```
 
-Response:
-```json
-{
-  "responseCode": "200M500",
-  "responseMessage": "Successful",
-  "data": [
-    { "id": 1, "name": "Budi", "email": "budi@mail.com", "created_at": "2026-04-11 10:00:00" }
-  ]
-}
-```
-
 ### POST /openapi/v1.0/users
-
 ```
 POST http://localhost:8300/openapi/v1.0/users
 Content-Type: application/json
 
-{
-  "name": "Citra",
-  "email": "citra@mail.com"
-}
+{ "name": "Citra", "email": "citra@mail.com" }
 ```
 
 ### GET /openapi/v1.0/users/{id}
-
 ```
 GET http://localhost:8300/openapi/v1.0/users/1
 ```
 
 ### PUT /openapi/v1.0/users/{id}
-
 ```
 PUT http://localhost:8300/openapi/v1.0/users/1
 Content-Type: application/json
 
-{
-  "name": "Doni",
-  "email": "doni@mail.com"
-}
+{ "name": "Doni", "email": "doni@mail.com" }
 ```
 
 ### DELETE /openapi/v1.0/users/{id}
-
 ```
 DELETE http://localhost:8300/openapi/v1.0/users/1
+```
+
+### POST /snap/v1.0/access-token/b2b
+```
+POST http://localhost:8300/snap/v1.0/access-token/b2b
+Content-Type: application/json
+X-CLIENT-KEY: artemis-dummy-client-001
+X-TIMESTAMP: 2026-04-12T07:53:29+02:00
+X-SIGNATURE: your-signature
 ```
 
 ---
 
 ## Testing
 
-Artemis uses PHPUnit for testing.
-
 ```bash
-# Run all tests
 php artemis test
-
-# Or directly
-vendor/bin/phpunit
-```
-
-Test structure:
-
-```
-tests/
-├── Unit/          # Test individual components
-│   ├── ValidatorTest.php
-│   ├── RouterTest.php
-│   ├── RequestTest.php
-│   └── ResponseTest.php
-└── Feature/       # Test complete features with database
-    └── UserTest.php
 ```
 
 ---
@@ -549,7 +522,16 @@ php artemis make:migration create_users     # Generate a migration
 - [x] Logging
 - [x] Unit Testing
 - [x] make:controller & make:migration
-- [ ] SNAP BI Support
+- [x] SNAP BI Support
+
+---
+
+## Support
+
+If you find this project helpful, consider supporting via:
+
+- Instagram: [@m_yussron](https://www.instagram.com/m_yussron/?hl=en)
+- Trakteer: [trakteer.id/muhammad_yusron17](https://trakteer.id/muhammad_yusron17)
 
 ---
 

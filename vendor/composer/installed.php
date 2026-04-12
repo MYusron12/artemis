@@ -3,7 +3,7 @@
         'name' => 'artemis/framework',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => '883ca88bd5029dc81b989494b3b9dca7a0570140',
+        'reference' => '217bf8254f00b982c1ea25dfcc767cc2e2f8f533',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'artemis/framework' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => '883ca88bd5029dc81b989494b3b9dca7a0570140',
+            'reference' => '217bf8254f00b982c1ea25dfcc767cc2e2f8f533',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
