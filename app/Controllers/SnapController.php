@@ -10,10 +10,6 @@ use Artemis\Snap\SnapHelper;
 
 class SnapController
 {
-    /**
-     * Dummy endpoint — issue access token
-     * POST /snap/v1.0/access-token/b2b
-     */
     public function issueAccessToken(): void
     {
         $request   = new Request();
@@ -21,33 +17,25 @@ class SnapController
         $clientKey = $request->header('X-CLIENT-KEY');
         $signature = $request->header('X-SIGNATURE');
 
-        // Validasi header wajib
         if (!$timestamp || !$clientKey || !$signature) {
             Response::error('Invalid Mandatory Field', 400, '502');
         }
 
-        // Validasi client key
         if ($clientKey !== Env::get('SNAP_CLIENT_ID')) {
             Response::error('Unauthorized', 401, '401');
         }
 
-        // Verifikasi signature
-        $publicKey    = file_get_contents(dirname(__DIR__, 2) . '/public_key.pem');
-        $stringToSign = $clientKey . '|' . $timestamp;
+        $publicKey = Env::get('SNAP_PUBLIC_KEY');
+        $verified  = Signature::verifyAsymmetric($clientKey, $timestamp, $signature, $publicKey);
 
-        $decoded   = base64_decode($signature);
-        $publicRes = openssl_pkey_get_public($publicKey);
-        $verified  = openssl_verify($stringToSign, $decoded, $publicRes, OPENSSL_ALGO_SHA256);
-
-        if ($verified !== 1) {
+        if (!$verified) {
             Response::error('Unauthorized. Invalid Signature', 401, '401');
         }
 
-        // Generate dummy access token
         $accessToken = base64_encode(json_encode([
             'clientId'  => $clientKey,
             'timestamp' => $timestamp,
-            'exp'       => time() + 900, // 15 menit
+            'exp'       => time() + 900,
         ]));
 
         Response::success([
@@ -57,26 +45,11 @@ class SnapController
         ]);
     }
 
-    /**
-     * Dummy endpoint yang butuh access token
-     * GET /snap/v1.0/dummy
-     */
-    public function dummy(): void
-    {
-        Response::success([
-            'message' => 'SNAP endpoint works!',
-        ]);
-    }
-
-    /**
-     * Client — request access token ke dummy server
-     * GET /snap/v1.0/get-token (untuk test)
-     */
     public function getAccessToken(): void
     {
         $timestamp  = SnapHelper::timestamp();
         $clientId   = Env::get('SNAP_CLIENT_ID');
-        $privateKey = file_get_contents(dirname(__DIR__, 2) . '/private_key.pem');
+        $privateKey = Env::get('SNAP_PRIVATE_KEY');
 
         $signature = Signature::generateAsymmetric($clientId, $timestamp, $privateKey);
 
@@ -84,7 +57,48 @@ class SnapController
             'clientId'  => $clientId,
             'timestamp' => $timestamp,
             'signature' => $signature,
-            'howToUse'  => 'Copy signature above, then POST to /snap/v1.0/access-token/b2b with headers X-CLIENT-KEY, X-TIMESTAMP, X-SIGNATURE',
+        ]);
+    }
+
+    /**
+     * Helper — generate symmetric signature untuk test
+     * GET /snap/v1.0/get-symmetric-signature
+     */
+    public function getSymmetricSignature(): void
+    {
+        $request     = new Request();
+        $accessToken = $request->input('accessToken');
+        $method      = $request->input('method', 'GET');
+        $endpoint    = $request->input('endpoint', '/snap/v1.0/dummy');
+        $body        = $request->input('body', '{}');
+        $timestamp   = SnapHelper::timestamp();
+
+        if (!$accessToken) {
+            Response::error('accessToken is required', 400, '502');
+        }
+
+        $signature = Signature::generateSymmetric(
+            strtoupper($method),
+            $endpoint,
+            $accessToken,
+            $body,
+            $timestamp,
+            Env::get('SNAP_CLIENT_SECRET')
+        );
+
+        Response::success([
+            'method'    => strtoupper($method),
+            'endpoint'  => $endpoint,
+            'timestamp' => $timestamp,
+            'signature' => $signature,
+            'howToUse'  => "Use Authorization: Bearer $accessToken with X-TIMESTAMP and X-SIGNATURE headers",
+        ]);
+    }
+
+    public function dummy(): void
+    {
+        Response::success([
+            'message' => 'SNAP endpoint works!',
         ]);
     }
 }

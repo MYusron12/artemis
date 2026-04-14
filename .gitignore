@@ -2,3 +2,7 @@ vendor/
 database/artemis.db
 .env
 storage/logs/
+storage/rate_limiter/
+private_key.pem
+public_key.pem
+generate_keys.php

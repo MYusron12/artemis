@@ -3,7 +3,9 @@
 use App\Controllers\UserController;
 use App\Controllers\SnapController;
 use App\Middlewares\AuthMiddleware;
+use App\Middlewares\LogMiddleware;
 use Artemis\Snap\SnapMiddleware;
+use App\Middlewares\RateLimitMiddleware;
 
 // Middleware per route
 $router->group('/openapi/v1.0', function($router) {
@@ -12,24 +14,22 @@ $router->group('/openapi/v1.0', function($router) {
     $router->get('/users/{id}', [UserController::class, 'show']);
     $router->put('/users/{id}', [UserController::class, 'update']);
     $router->delete('/users/{id}', [UserController::class, 'destroy']);
-});
+}, [RateLimitMiddleware::class, LogMiddleware::class]);
 
-// Middleware per group
+// Middleware per group contoh authmidleware dan ratelimitmidleware
 $router->group('/openapi/v1.0', function($router) {
     $router->get('/profile', [UserController::class, 'index']);
-}, [AuthMiddleware::class]);
+}, [AuthMiddleware::class, RateLimitMiddleware::class]);
 
-// Middleware per route saja
-$router->get('/openapi/v1.0/secret', [UserController::class, 'index'])
-       ->middleware(AuthMiddleware::class);
+// Helper endpoints untuk testing
+$router->get('/snap/v1.0/get-token', [SnapController::class, 'getAccessToken']);
+$router->get('/snap/v1.0/get-symmetric-signature', [SnapController::class, 'getSymmetricSignature']);
 
-// Endpoint untuk issue access token (tanpa middleware dulu)
-$router->post('/snap/v1.0/access-token/b2b', [SnapController::class, 'issueAccessToken']);
+// Issue access token
+$router->post('/snap/v1.0/access-token/b2b', [SnapController::class, 'issueAccessToken'])
+       ->middleware(RateLimitMiddleware::class);
 
-// Endpoint yang butuh access token
+// Protected endpoints — butuh symmetric signature
 $router->group('/snap/v1.0', function($router) {
     $router->get('/dummy', [SnapController::class, 'dummy']);
 }, [SnapMiddleware::class]);
-
-// Helper — generate signature untuk test
-$router->get('/snap/v1.0/get-token', [SnapController::class, 'getAccessToken']);

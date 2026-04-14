@@ -49,13 +49,24 @@ switch ($command) {
         passthru('vendor\bin\phpunit');
         break;
 
+    case 'make:middleware':
+    if (!$arg) {
+        echo "Nama middleware diperlukan.\n";
+        echo "Gunakan: php artemis make:middleware NamaMiddleware\n";
+        break;
+    }
+    makeMiddleware($arg);
+    break;
+
     default:
         echo "Artemis CLI\n\n";
         echo "Perintah tersedia:\n";
-        echo "  php artemis run                              Start development server\n";
-        echo "  php artemis migrate                          Run database migrations\n";
-        echo "  php artemis make:controller NamaController   Generate a controller\n";
-        echo "  php artemis make:migration create_nama_table Generate a migration\n";
+        echo "  php artemis run                                Start development server\n";
+        echo "  php artemis migrate                            Run database migrations\n";
+        echo "  php artemis test                               Run unit tests\n";
+        echo "  php artemis make:controller NamaController     Generate a controller\n";
+        echo "  php artemis make:migration create_nama_table   Generate a migration\n";
+        echo "  php artemis make:middleware NamaMiddleware      Generate a middleware\n";
 }
 
 function makeController(string $name): void
@@ -158,4 +169,44 @@ PHP;
 
     file_put_contents($file, $template);
     echo "Migration berhasil dibuat: database/migrations/{$timestamp}_{$name}.php\n";
+}
+
+function makeMiddleware(string $name): void
+{
+    $dir  = __DIR__ . '/app/Middlewares';
+    $file = "$dir/{$name}.php";
+
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+
+    if (file_exists($file)) {
+        echo "Middleware $name sudah ada.\n";
+        return;
+    }
+
+    $template = <<<PHP
+<?php
+
+namespace App\Middlewares;
+
+use Artemis\Middleware;
+use Artemis\Request;
+use Artemis\Response;
+
+class {$name} implements Middleware
+{
+    public function handle(Request \$request, callable \$next): void
+    {
+        // Logic sebelum controller
+        
+        \$next();
+
+        // Logic setelah controller
+    }
+}
+PHP;
+
+    file_put_contents($file, $template);
+    echo "Middleware berhasil dibuat: app/Middlewares/{$name}.php\n";
 }

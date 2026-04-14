@@ -43,4 +43,44 @@ class Signature
 
         return base64_encode(hash_hmac('sha512', $stringToSign, $clientSecret, true));
     }
+
+    public static function verifyAsymmetric(
+        string $clientId,
+        string $timestamp,
+        string $signature,
+        string $publicKey
+    ): bool {
+        $stringToSign = $clientId . '|' . $timestamp;
+        $publicKey    = self::formatPublicKey($publicKey);
+        $publicRes    = openssl_pkey_get_public($publicKey);
+        $decoded      = base64_decode($signature);
+
+        return openssl_verify($stringToSign, $decoded, $publicRes, OPENSSL_ALGO_SHA256) === 1;
+    }
+
+    private static function formatPrivateKey(string $key): string
+    {
+        $key = trim($key);
+
+        if (str_contains($key, '-----BEGIN')) {
+            return $key;
+        }
+
+        return "-----BEGIN PRIVATE KEY-----\n" .
+            chunk_split($key, 64, "\n") .
+            "-----END PRIVATE KEY-----\n";
+    }
+
+    private static function formatPublicKey(string $key): string
+    {
+        $key = trim($key);
+
+        if (str_contains($key, '-----BEGIN')) {
+            return $key;
+        }
+
+        return "-----BEGIN PUBLIC KEY-----\n" .
+            chunk_split($key, 64, "\n") .
+            "-----END PUBLIC KEY-----\n";
+    }
 }

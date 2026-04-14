@@ -29,6 +29,7 @@ Artemis is built with one goal: **simplicity**. No magic, no bloat — just the 
 
 - PHP >= 8.0
 - Composer
+- OpenSSL extension (for SNAP BI)
 
 ---
 
@@ -47,19 +48,39 @@ cd artemis
 composer install
 ```
 
-### 3. Setup environment
+### 3. Generate RSA keys (for SNAP BI)
+
+```bash
+php generate_keys.php
+```
+
+Or manually via OpenSSL CLI:
+
+```bash
+# Generate private key
+openssl genrsa -out private_key.pem 2048
+
+# Extract public key from private key
+openssl rsa -in private_key.pem -pubout -out public_key.pem
+```
+
+After generating, copy the key contents into your `.env` file (see Environment section).
+
+> Add `private_key.pem` and `public_key.pem` to `.gitignore` — never commit these files.
+
+### 4. Setup environment
 
 ```bash
 cp .env.example .env
 ```
 
-### 4. Run migrations
+### 5. Run migrations
 
 ```bash
 php artemis migrate
 ```
 
-### 5. Run the server
+### 6. Run the server
 
 ```bash
 php artemis run
@@ -84,6 +105,7 @@ artemis/
 │   ├── ErrorHandler.php
 │   ├── Env.php
 │   ├── Log.php
+│   ├── RateLimiter.php
 │   └── Snap/
 │       ├── Signature.php
 │       ├── AccessToken.php
@@ -95,7 +117,10 @@ artemis/
 │   │   ├── UserController.php
 │   │   └── SnapController.php
 │   └── Middlewares/
-│       └── AuthMiddleware.php
+│       ├── AuthMiddleware.php
+│       ├── CorsMiddleware.php
+│       ├── RateLimitMiddleware.php
+│       └── LogMiddleware.php
 │
 ├── database/
 │   ├── migrations/
@@ -106,7 +131,8 @@ artemis/
 │   └── api.php
 │
 ├── storage/
-│   └── logs/              # Daily log files
+│   ├── logs/              # Daily log files
+│   └── rate_limiter/      # Rate limiter store
 │
 ├── tests/
 │   ├── Unit/
@@ -122,6 +148,7 @@ artemis/
 │   └── index.html         # Landing page
 │
 ├── artemis                # CLI tool
+├── generate_keys.php      # RSA key generator
 ├── phpunit.xml
 ├── composer.json
 └── .env
@@ -148,15 +175,91 @@ DB_PATH=database/artemis.db
 # DB_USER=root
 # DB_PASS=
 
+# CORS
+CORS_ORIGIN=*
+# CORS_ORIGIN=http://192.168.1.100,https://myapp.com
+
+# Rate Limiter
+RATE_LIMIT_MAX=60
+RATE_LIMIT_WINDOW=60
+
 # SNAP BI
 SNAP_CLIENT_ID=your-client-id
 SNAP_CLIENT_SECRET=your-client-secret
 SNAP_BASE_URL=https://api.bank.co.id
 SNAP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
-...
+...isi private key...
 -----END PRIVATE KEY-----"
 SNAP_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----
-...
+...isi public key...
+-----END PUBLIC KEY-----"
+```
+
+---
+
+## Generating RSA Keys
+
+Artemis uses RSA 2048-bit keys for SNAP BI Asymmetric Signature.
+
+### Option 1 — PHP script (recommended)
+
+Create `generate_keys.php` in root:
+
+```php
+<?php
+
+putenv('OPENSSL_CONF=C:/xampp/apache/conf/openssl.cnf');
+
+$config = [
+    'private_key_bits' => 2048,
+    'private_key_type' => OPENSSL_KEYTYPE_RSA,
+    'config'           => 'C:/xampp/apache/conf/openssl.cnf',
+];
+
+$res = openssl_pkey_new($config);
+openssl_pkey_export($res, $privateKey, null, $config);
+$publicKey = openssl_pkey_get_details($res)['key'];
+
+file_put_contents('private_key.pem', $privateKey);
+file_put_contents('public_key.pem', $publicKey);
+
+echo "private_key.pem — OK\n";
+echo "public_key.pem  — OK\n";
+```
+
+Run:
+
+```bash
+php generate_keys.php
+```
+
+### Option 2 — OpenSSL CLI
+
+```bash
+# Generate private key
+openssl genrsa -out private_key.pem 2048
+
+# Extract public key
+openssl rsa -in private_key.pem -pubout -out public_key.pem
+```
+
+### Option 3 — Online generator (development only)
+
+Use [https://cryptotools.net/rsagen](https://cryptotools.net/rsagen) — set key size to 2048.
+
+> Never use online generators for production keys.
+
+### Copy keys to .env
+
+After generating, open `private_key.pem` and `public_key.pem`, copy the full content including headers into `.env`:
+
+```env
+SNAP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASC...
+-----END PRIVATE KEY-----"
+
+SNAP_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...
 -----END PUBLIC KEY-----"
 ```
 
@@ -164,13 +267,13 @@ SNAP_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----
 
 ## Routing
 
-Define your routes in `routes/api.php`. Artemis supports route grouping for versioned APIs:
-
 ```php
 <?php
 
 use App\Controllers\UserController;
 use App\Middlewares\AuthMiddleware;
+use App\Middlewares\RateLimitMiddleware;
+use App\Middlewares\LogMiddleware;
 
 $router->group('/openapi/v1.0', function($router) {
     $router->get('/users', [UserController::class, 'index']);
@@ -178,143 +281,35 @@ $router->group('/openapi/v1.0', function($router) {
     $router->get('/users/{id}', [UserController::class, 'show']);
     $router->put('/users/{id}', [UserController::class, 'update']);
     $router->delete('/users/{id}', [UserController::class, 'destroy']);
-});
+}, [RateLimitMiddleware::class, LogMiddleware::class]);
 
-// With middleware per group
+// Multiple middleware
 $router->group('/openapi/v1.0', function($router) {
     $router->get('/profile', [UserController::class, 'index']);
-}, [AuthMiddleware::class]);
+}, [AuthMiddleware::class, RateLimitMiddleware::class]);
 
-// With middleware per route
+// Per route
 $router->get('/openapi/v1.0/secret', [UserController::class, 'index'])
        ->middleware(AuthMiddleware::class);
-
-// Adding a new version is easy
-$router->group('/openapi/v2.0', function($router) {
-    $router->get('/users', [UserController::class, 'index']);
-});
-```
-
----
-
-## Controllers
-
-```php
-<?php
-
-namespace App\Controllers;
-
-use Artemis\Request;
-use Artemis\Response;
-use Artemis\Database;
-use Artemis\Validator;
-use Artemis\Log;
-
-class UserController
-{
-    public function index(): void
-    {
-        $users = Database::table('users')->get();
-        Response::success($users);
-    }
-
-    public function show(string $id): void
-    {
-        $user = Database::table('users')->where('id', $id)->first();
-
-        if (!$user) {
-            Response::error('User Not Found', 404, '503');
-        }
-
-        Response::success($user);
-    }
-
-    public function store(): void
-    {
-        $request   = new Request();
-        $validator = Validator::make($request->body(), [
-            'name'  => 'required|min:3|max:100',
-            'email' => 'required|email',
-        ]);
-
-        if ($validator->fails()) {
-            Response::error($validator->firstError(), 400, '502');
-        }
-
-        try {
-            Database::table('users')->insert([
-                'name'  => $request->input('name'),
-                'email' => $request->input('email'),
-            ]);
-        } catch (\RuntimeException $e) {
-            if ($e->getCode() === 409) {
-                Response::error('Data already exists', 409, '509');
-            }
-            Response::error('Database error', 500, '500');
-        }
-
-        $user = Database::table('users')->where('email', $request->input('email'))->first();
-
-        Log::info('User created: ' . $request->input('email'));
-
-        Response::success($user, 'Successful', 201);
-    }
-
-    public function update(string $id): void
-    {
-        $request   = new Request();
-        $validator = Validator::make($request->body(), [
-            'name'  => 'required|min:3|max:100',
-            'email' => 'required|email',
-        ]);
-
-        if ($validator->fails()) {
-            Response::error($validator->firstError(), 400, '502');
-        }
-
-        Database::table('users')->where('id', $id)->update([
-            'name'  => $request->input('name'),
-            'email' => $request->input('email'),
-        ]);
-
-        $user = Database::table('users')->where('id', $id)->first();
-        Response::success($user);
-    }
-
-    public function destroy(string $id): void
-    {
-        Database::table('users')->where('id', $id)->delete();
-        Response::success(null, 'Deleted');
-    }
-}
 ```
 
 ---
 
 ## Middleware
 
-```php
-<?php
+Available middlewares:
 
-namespace App\Middlewares;
+| Middleware | Description |
+|---|---|
+| `AuthMiddleware` | Validate Bearer token |
+| `RateLimitMiddleware` | Limit requests per IP |
+| `LogMiddleware` | Log request start and duration |
+| `SnapMiddleware` | Validate SNAP BI symmetric signature |
 
-use Artemis\Middleware;
-use Artemis\Request;
-use Artemis\Response;
+Generate a new middleware:
 
-class AuthMiddleware implements Middleware
-{
-    public function handle(Request $request, callable $next): void
-    {
-        $token = $request->header('Authorization');
-
-        if (!$token || $token !== 'Bearer secret-token') {
-            Response::error('Unauthorized', 401, '401');
-        }
-
-        $next();
-    }
-}
+```bash
+php artemis make:middleware NamaMiddleware
 ```
 
 ---
@@ -347,13 +342,13 @@ Available rules:
 
 ## Database
 
-Artemis supports SQLite and MySQL via `.env`. Run migrations with:
+Artemis supports SQLite and MySQL. Run migrations:
 
 ```bash
 php artemis migrate
 ```
 
-Query Builder usage:
+Query Builder:
 
 ```php
 Database::table('users')->get();
@@ -367,8 +362,6 @@ Database::table('users')->where('id', 1)->delete();
 
 ## Logging
 
-Logs are stored in `storage/logs/` as daily files.
-
 ```php
 use Artemis\Log;
 
@@ -377,54 +370,53 @@ Log::warning('Failed login attempt');
 Log::error('Something went wrong');
 ```
 
-All incoming requests are logged automatically.
+Log output example:
+
+```
+[2026-04-12 10:00:00] REQUEST: GET /openapi/v1.0/users from ::1
+[2026-04-12 10:00:00] INFO: START GET /openapi/v1.0/users from ::1
+[2026-04-12 10:00:00] INFO: END GET /openapi/v1.0/users — 3.42ms
+[2026-04-12 10:00:01] INFO: User created: citra@mail.com
+```
 
 ---
 
 ## SNAP BI
 
-Artemis has built-in SNAP BI support for Access Token B2B.
+### Step 1 — Generate signature
 
-### Generate signature & request access token
-
-```php
-use Artemis\Snap\Signature;
-use Artemis\Snap\SnapHelper;
-
-$timestamp  = SnapHelper::timestamp();
-$clientId   = Env::get('SNAP_CLIENT_ID');
-$privateKey = Env::get('SNAP_PRIVATE_KEY');
-
-$signature = Signature::generateAsymmetric($clientId, $timestamp, $privateKey);
+```
+GET http://localhost:8300/snap/v1.0/get-token
 ```
 
-### Routes
+### Step 2 — Request access token
 
-```php
-use App\Controllers\SnapController;
-use Artemis\Snap\SnapMiddleware;
+```
+POST http://localhost:8300/snap/v1.0/access-token/b2b
+X-CLIENT-KEY: your-client-id
+X-TIMESTAMP: 2026-04-12T07:53:29+07:00
+X-SIGNATURE: {signature-from-step-1}
 
-// Issue access token
-$router->post('/snap/v1.0/access-token/b2b', [SnapController::class, 'issueAccessToken']);
-
-// Protected endpoint
-$router->group('/snap/v1.0', function($router) {
-    $router->get('/dummy', [SnapController::class, 'dummy']);
-}, [SnapMiddleware::class]);
+{ "grantType": "client_credentials" }
 ```
 
-### Access Token Response
+### Step 3 — Generate symmetric signature
 
-```json
-{
-  "responseCode": "200M500",
-  "responseMessage": "Successful",
-  "data": {
-    "accessToken": "eyJ...",
-    "tokenType": "BearerToken",
-    "expiresIn": 900
-  }
-}
+```
+GET http://localhost:8300/snap/v1.0/get-symmetric-signature
+  ?accessToken={token}
+  &method=GET
+  &endpoint=/snap/v1.0/dummy
+```
+
+### Step 4 — Hit protected endpoint
+
+```
+GET http://localhost:8300/snap/v1.0/dummy
+Authorization: Bearer {accessToken}
+X-CLIENT-KEY: your-client-id
+X-TIMESTAMP: {timestamp-from-step-3}
+X-SIGNATURE: {signature-from-step-3}
 ```
 
 ---
@@ -437,8 +429,10 @@ $router->group('/snap/v1.0', function($router) {
 | 201 | 201M500 | Successful |
 | 400 | 400M502 | Invalid Mandatory Field |
 | 401 | 401M401 | Unauthorized |
+| 403 | 403M403 | Forbidden |
 | 404 | 404M503 | Route Not Found |
 | 409 | 409M509 | Data already exists |
+| 429 | 429M429 | Too Many Requests |
 | 500 | 500M500 | Internal Server Error |
 
 ---
@@ -447,44 +441,55 @@ $router->group('/snap/v1.0', function($router) {
 
 Base URL: `http://localhost:8300`
 
-### GET /openapi/v1.0/users
-```
-GET http://localhost:8300/openapi/v1.0/users
+### Users
+
+```bash
+# Get all users
+curl -X GET http://localhost:8300/openapi/v1.0/users \
+  -H "Content-Type: application/json"
+
+# Create user
+curl -X POST http://localhost:8300/openapi/v1.0/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Budi", "email": "budi@mail.com"}'
+
+# Get user by ID
+curl -X GET http://localhost:8300/openapi/v1.0/users/1 \
+  -H "Content-Type: application/json"
+
+# Update user
+curl -X PUT http://localhost:8300/openapi/v1.0/users/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Doni", "email": "doni@mail.com"}'
+
+# Delete user
+curl -X DELETE http://localhost:8300/openapi/v1.0/users/1 \
+  -H "Content-Type: application/json"
 ```
 
-### POST /openapi/v1.0/users
-```
-POST http://localhost:8300/openapi/v1.0/users
-Content-Type: application/json
+### SNAP BI
 
-{ "name": "Citra", "email": "citra@mail.com" }
-```
+```bash
+# Step 1 — Generate asymmetric signature
+curl -X GET http://localhost:8300/snap/v1.0/get-token
 
-### GET /openapi/v1.0/users/{id}
-```
-GET http://localhost:8300/openapi/v1.0/users/1
-```
+# Step 2 — Request access token
+curl -X POST http://localhost:8300/snap/v1.0/access-token/b2b \
+  -H "Content-Type: application/json" \
+  -H "X-CLIENT-KEY: artemis-dummy-client-001" \
+  -H "X-TIMESTAMP: 2026-04-12T07:53:29+07:00" \
+  -H "X-SIGNATURE: {signature}" \
+  -d '{"grantType": "client_credentials"}'
 
-### PUT /openapi/v1.0/users/{id}
-```
-PUT http://localhost:8300/openapi/v1.0/users/1
-Content-Type: application/json
+# Step 3 — Generate symmetric signature
+curl -X GET "http://localhost:8300/snap/v1.0/get-symmetric-signature?accessToken={token}&method=GET&endpoint=/snap/v1.0/dummy"
 
-{ "name": "Doni", "email": "doni@mail.com" }
-```
-
-### DELETE /openapi/v1.0/users/{id}
-```
-DELETE http://localhost:8300/openapi/v1.0/users/1
-```
-
-### POST /snap/v1.0/access-token/b2b
-```
-POST http://localhost:8300/snap/v1.0/access-token/b2b
-Content-Type: application/json
-X-CLIENT-KEY: artemis-dummy-client-001
-X-TIMESTAMP: 2026-04-12T07:53:29+02:00
-X-SIGNATURE: your-signature
+# Step 4 — Hit protected endpoint
+curl -X GET http://localhost:8300/snap/v1.0/dummy \
+  -H "Authorization: Bearer {accessToken}" \
+  -H "X-CLIENT-KEY: artemis-dummy-client-001" \
+  -H "X-TIMESTAMP: {timestamp}" \
+  -H "X-SIGNATURE: {signature}"
 ```
 
 ---
@@ -505,6 +510,7 @@ php artemis migrate                         # Run database migrations
 php artemis test                            # Run unit tests
 php artemis make:controller UserController  # Generate a controller
 php artemis make:migration create_users     # Generate a migration
+php artemis make:middleware AuthMiddleware  # Generate a middleware
 ```
 
 ---
@@ -521,14 +527,16 @@ php artemis make:migration create_users     # Generate a migration
 - [x] Environment (.env)
 - [x] Logging
 - [x] Unit Testing
-- [x] make:controller & make:migration
-- [x] SNAP BI Support
+- [x] make:controller, make:migration & make:middleware
+- [x] SNAP BI Support (Asymmetric & Symmetric Signature)
+- [x] CORS
+- [x] Rate Limiter
 
 ---
 
 ## Support
 
-If you find this project helpful, consider supporting via:
+If you find this project helpful, consider supporting:
 
 - Instagram: [@m_yussron](https://www.instagram.com/m_yussron/?hl=en)
 - Trakteer: [trakteer.id/muhammad_yusron17](https://trakteer.id/muhammad_yusron17)
